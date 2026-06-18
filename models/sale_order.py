@@ -117,6 +117,41 @@ class SaleOrder(models.Model):
         return res
 
     # ============================================================
+    # OVERRIDE: action_wsd_mark_delivered (dashboard "Mark Delivered" button)
+    #
+    # Dashboard module hanya set website_order_stage='done' + validate
+    # picking. Tidak set sale.order state='done', jadi hook write()
+    # di atas tidak ke-trigger. Override ini untuk eksplisit kirim:
+    # - order_delivered (Pesanan Dalam Pengiriman) HANYA jika sebelumnya
+    #   stage != 'out_for_delivery' (admin belum klik Send to Courier,
+    #   jadi customer belum dapat notifikasi pengiriman).
+    # - order_done (Pesanan Selesai) SELALU saat Mark Delivered.
+    # ============================================================
+    def action_wsd_mark_delivered(self):
+        before_stage = {order.id: order.website_order_stage for order in self}
+        res = super().action_wsd_mark_delivered()
+        for order in self:
+            prev = before_stage.get(order.id)
+            # Jika admin tidak lewat Send to Courier, kirim pengiriman dulu
+            if prev != 'out_for_delivery':
+                try:
+                    order._whatsapp_notify_order_delivered()
+                except Exception as e:
+                    _logger.exception(
+                        "[WA] Failed notify order_delivered (from mark_delivered) for %s: %s",
+                        order.name, e,
+                    )
+            # Selalu kirim Pesanan Selesai saat Mark Delivered
+            try:
+                order._whatsapp_notify_order_done()
+            except Exception as e:
+                _logger.exception(
+                    "[WA] Failed notify order_done (from mark_delivered) for %s: %s",
+                    order.name, e,
+                )
+        return res
+
+    # ============================================================
     # PRIVATE: helpers
     # ============================================================
 
