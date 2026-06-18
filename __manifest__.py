@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'WhatsApp Evolution API Notification',
-    'version': '17.0.1.3.0',
+    'version': '17.0.1.4.0',
     'category': 'Website/Website',
     'summary': 'Notifikasi WhatsApp otomatis ke customer via Evolution API untuk setiap perubahan status pesanan',
     'description': """
@@ -24,13 +24,14 @@ Alur trigger (proses restoran/warung makan):
 - *Pesanan Siap Dikirim*  (COD tx created)
 - *Pesanan Sedang Dimasak*  (website_order_stage -> cooking)
 - *Pesanan Dalam Pengiriman*  (website_order_stage -> out_for_delivery)
-- *Pesanan Selesai*  (state -> done) + "Terima kasih telah memesan di {store}."
+- *Pesanan Selesai*  (state -> done) + "Terima kasih" + URL Feedback
 - *Pesanan Dibatalkan*  (state -> cancelled)
 
-Halaman public read-only: /shop/order/<order_id>/<access_token>
-- Akses tanpa login
-- Hanya view (tidak ada action/edit)
-- Token di-generate otomatis per order (field access_token bawaan website_sale)
+Halaman public:
+- /shop/order/<order_id>/<access_token>      : detail pesanan (read-only)
+- /shop/feedback/<order_id>/<access_token>   : form feedback (rating 1-5
+  pengiriman, rating 1-5 makanan, kolom catatan, permintaan menu baru).
+  1 feedback per order (unique constraint). Submit via public token.
 
 Konfigurasi:
 - Settings > Website > WhatsApp Evolution API Settings
@@ -40,6 +41,7 @@ Konfigurasi:
 - Toggle per trigger (on/off)
 
 Log pesan tersimpan di model whatsapp.message.log (audit trail).
+Feedback tersimpan di model whatsapp.order.feedback (audit + insight).
 
 Author: Warung Lakku
 """,
@@ -56,6 +58,7 @@ Author: Warung Lakku
         'data/ir_cron_retry.xml',
         'views/res_config_settings_views.xml',
         'views/whatsapp_message_log_views.xml',
+        'views/whatsapp_order_feedback_views.xml',
         'views/sale_order_views.xml',
         'views/public_order_views.xml',
     ],

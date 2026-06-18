@@ -268,20 +268,39 @@ class SaleOrder(models.Model):
         self.ensure_one()
         return "*Pesanan Dalam Pengiriman*\nOrder %s" % self.name
 
+    def _whatsapp_get_feedback_url(self):
+        """URL public untuk form feedback (rating bintang + catatan).
+
+        Format: {base}/shop/feedback/{order_id}/{access_token}
+        Reuse access_token yang sama dengan order detail page.
+        """
+        self.ensure_one()
+        ICP = self.env['ir.config_parameter'].sudo()
+        base = (ICP.get_param('whatsapp_evolution.portal_base_url')
+                or 'https://odoo.warunglakku.com').rstrip('/')
+        if not self.access_token:
+            self._generate_access_token_safe()
+        return '%s/shop/feedback/%d/%s' % (base, self.id, self.access_token or 'NO_TOKEN')
+
     def _whatsapp_build_done_text(self):
-        """Format premium, no emoji, dengan closing terima kasih:
+        """Format premium, no emoji, dengan closing terima kasih + URL feedback:
         *Pesanan Selesai*
         Order S00024
 
         Terima kasih telah memesan di Warung Lakku.
+
+        Bantu kami meningkatkan layanan:
+        https://odoo.warunglakku.com/shop/feedback/...
         """
         self.ensure_one()
         store = self._whatsapp_get_store_name()
+        feedback_url = self._whatsapp_get_feedback_url()
         return (
             "*Pesanan Selesai*\n"
             "Order %s\n\n"
-            "Terima kasih telah memesan di %s."
-        ) % (self.name, store)
+            "Terima kasih telah memesan di %s.\n\n"
+            "Bantu kami meningkatkan layanan:\n%s"
+        ) % (self.name, store, feedback_url)
 
     def _whatsapp_build_cancelled_text(self):
         """Format premium, no emoji:
@@ -347,6 +366,25 @@ class SaleOrder(models.Model):
             'params': {
                 'title': 'WhatsApp',
                 'message': 'Pesan dikirim (cek WhatsApp Logs untuk status).',
+                'type': 'info',
+                'sticky': False,
+            },
+        }
+
+    def action_test_send_whatsapp_done(self):
+        """Manual test: kirim WA 'Pesanan Selesai' + URL feedback.
+
+        Untuk QA — tidak peduli state order, paksa kirim done_text.
+        """
+        for order in self:
+            text = order._whatsapp_build_done_text()
+            order._whatsapp_send_safe('order_done', text)
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': 'WhatsApp',
+                'message': 'Pesan "Pesanan Selesai" dikirim (cek WhatsApp Logs).',
                 'type': 'info',
                 'sticky': False,
             },

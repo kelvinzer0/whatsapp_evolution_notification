@@ -102,4 +102,335 @@
         </t>
     </template>
 
+    <!-- ============================================================ -->
+    <!-- Feedback form (premium star-rating, no emoji)                -->
+    <!-- Route GET: /shop/feedback/<order_id>/<access_token>          -->
+    <!-- ============================================================ -->
+
+    <template id="feedback_form" name="Order Feedback Form">
+        <t t-call="website.layout">
+            <t t-set="pageName" t-value="'Beri Penilaian'"/>
+
+            <section class="container mt-4 mb-5">
+                <div class="row justify-content-center">
+                    <div class="col-12 col-lg-7">
+
+                        <!-- Header -->
+                        <div class="text-center mb-4">
+                            <h2 class="fw-bold mb-1">Beri Penilaian</h2>
+                            <p class="text-muted mb-0">
+                                Order <span class="fw-semibold" t-esc="order.name"/>
+                            </p>
+                        </div>
+
+                        <!-- Error message -->
+                        <div t-if="error" class="alert alert-danger" role="alert">
+                            <span t-esc="error"/>
+                        </div>
+
+                        <!-- Form -->
+                        <form method="post"
+                              t-att-action="'/shop/feedback/%s/%s' % (order.id, access_token)"
+                              class="card border-0 shadow-sm">
+
+                            <div class="card-body p-4">
+
+                                <!-- Rating: Pengiriman -->
+                                <div class="mb-4">
+                                    <label class="form-label fw-semibold d-block mb-2">
+                                        Penilaian Pengiriman
+                                    </label>
+                                    <div class="star-rating star-rating-delivery" role="radiogroup" aria-label="Penilaian Pengiriman">
+                                        <input type="radio" name="rating_delivery" id="rd-d-5" value="5" t-att-checked="submitted.get('rating_delivery') == '5'"/>
+                                        <label for="rd-d-5" title="5 bintang">&#9733;</label>
+                                        <input type="radio" name="rating_delivery" id="rd-d-4" value="4" t-att-checked="submitted.get('rating_delivery') == '4'"/>
+                                        <label for="rd-d-4" title="4 bintang">&#9733;</label>
+                                        <input type="radio" name="rating_delivery" id="rd-d-3" value="3" t-att-checked="submitted.get('rating_delivery') == '3'"/>
+                                        <label for="rd-d-3" title="3 bintang">&#9733;</label>
+                                        <input type="radio" name="rating_delivery" id="rd-d-2" value="2" t-att-checked="submitted.get('rating_delivery') == '2'"/>
+                                        <label for="rd-d-2" title="2 bintang">&#9733;</label>
+                                        <input type="radio" name="rating_delivery" id="rd-d-1" value="1" t-att-checked="submitted.get('rating_delivery') == '1'"/>
+                                        <label for="rd-d-1" title="1 bintang">&#9733;</label>
+                                    </div>
+                                    <small class="text-muted">Beri bintang 1-5 untuk kecepatan &amp; kualitas pengiriman.</small>
+                                </div>
+
+                                <hr class="my-4"/>
+
+                                <!-- Rating: Makanan -->
+                                <div class="mb-4">
+                                    <label class="form-label fw-semibold d-block mb-2">
+                                        Penilaian Makanan
+                                    </label>
+                                    <div class="star-rating star-rating-food" role="radiogroup" aria-label="Penilaian Makanan">
+                                        <input type="radio" name="rating_food" id="rf-d-5" value="5" t-att-checked="submitted.get('rating_food') == '5'"/>
+                                        <label for="rf-d-5" title="5 bintang">&#9733;</label>
+                                        <input type="radio" name="rating_food" id="rf-d-4" value="4" t-att-checked="submitted.get('rating_food') == '4'"/>
+                                        <label for="rf-d-4" title="4 bintang">&#9733;</label>
+                                        <input type="radio" name="rating_food" id="rf-d-3" value="3" t-att-checked="submitted.get('rating_food') == '3'"/>
+                                        <label for="rf-d-3" title="3 bintang">&#9733;</label>
+                                        <input type="radio" name="rating_food" id="rf-d-2" value="2" t-att-checked="submitted.get('rating_food') == '2'"/>
+                                        <label for="rf-d-2" title="2 bintang">&#9733;</label>
+                                        <input type="radio" name="rating_food" id="rf-d-1" value="1" t-att-checked="submitted.get('rating_food') == '1'"/>
+                                        <label for="rf-d-1" title="1 bintang">&#9733;</label>
+                                    </div>
+                                    <small class="text-muted">Beri bintang 1-5 untuk rasa &amp; kualitas makanan.</small>
+                                </div>
+
+                                <hr class="my-4"/>
+
+                                <!-- Feedback text -->
+                                <div class="mb-4">
+                                    <label for="feedback_text" class="form-label fw-semibold">
+                                        Catatan / Feedback
+                                    </label>
+                                    <textarea name="feedback_text"
+                                              id="feedback_text"
+                                              class="form-control"
+                                              rows="3"
+                                              maxlength="500"
+                                              placeholder="Tulis pengalaman Anda (opsional)."
+                                              t-esc="submitted.get('feedback_text', '')"/>
+                                    <small class="text-muted">Maksimal 500 karakter.</small>
+                                </div>
+
+                                <hr class="my-4"/>
+
+                                <!-- Menu request -->
+                                <div class="mb-2">
+                                    <label class="form-label fw-semibold d-block mb-2">
+                                        Permintaan Menu Baru
+                                    </label>
+                                    <div class="form-check">
+                                        <input type="radio"
+                                               name="menu_request"
+                                               id="menu_request_enough"
+                                               value="enough"
+                                               class="form-check-input"
+                                               t-att-checked="submitted.get('menu_request', 'enough') != 'new'"/>
+                                        <label for="menu_request_enough" class="form-check-label">
+                                            Sudah cukup, tidak perlu menu tambahan
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input type="radio"
+                                               name="menu_request"
+                                               id="menu_request_new"
+                                               value="new"
+                                               class="form-check-input"
+                                               t-att-checked="submitted.get('menu_request') == 'new'"/>
+                                        <label for="menu_request_new" class="form-check-label">
+                                            Ada usulan menu baru
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Menu request text (conditional, shown via JS) -->
+                                <div class="mb-4 mt-2" id="menu_request_text_wrap"
+                                     t-attf-style="#{submitted.get('menu_request') == 'new' and '' or 'display:none;'}">
+                                    <label for="menu_request_text" class="form-label fw-semibold">
+                                        Usulan Menu Baru
+                                    </label>
+                                    <textarea name="menu_request_text"
+                                              id="menu_request_text"
+                                              class="form-control"
+                                              rows="2"
+                                              maxlength="300"
+                                              placeholder="Contoh: Nasi goreng seafood, es krim matcha, dll."
+                                              t-esc="submitted.get('menu_request_text', '')"/>
+                                </div>
+
+                                <hr class="my-4"/>
+
+                                <!-- Submit -->
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-primary btn-lg fw-semibold">
+                                        Kirim Penilaian
+                                    </button>
+                                </div>
+
+                            </div>
+                        </form>
+
+                        <!-- Footer link -->
+                        <div class="text-center mt-3">
+                            <a t-attf-href="/shop/order/#{order.id}/#{access_token}"
+                               class="text-decoration-none small">
+                                Lihat detail pesanan
+                            </a>
+                        </div>
+
+                    </div>
+                </div>
+            </section>
+
+            <!-- CSS for star rating -->
+            <style>
+                .star-rating{
+                    display:inline-flex;
+                    flex-direction:row-reverse;
+                    font-size:2.5rem;
+                    line-height:1;
+                }
+                .star-rating input{display:none;}
+                .star-rating label{
+                    cursor:pointer;
+                    color:#d1d5db;
+                    transition:color .15s ease;
+                    padding:0 .1rem;
+                }
+                .star-rating label:hover,
+                .star-rating label:hover ~ label,
+                .star-rating input:checked ~ label{
+                    color:#f59e0b;
+                }
+                .star-rating label:hover,
+                .star-rating label:hover ~ label{
+                    color:#fbbf24;
+                }
+                .star-rating input:checked ~ label{
+                    color:#f59e0b;
+                }
+            </style>
+
+            <!-- JS: toggle menu_request_text visibility -->
+            <script>
+                (function () {
+                    function syncMenuText() {
+                        var isNew = document.getElementById('menu_request_new');
+                        var wrap = document.getElementById('menu_request_text_wrap');
+                        if (!isNew || !wrap) return;
+                        if (isNew.checked) {
+                            wrap.style.display = '';
+                        } else {
+                            wrap.style.display = 'none';
+                        }
+                    }
+                    document.addEventListener('DOMContentLoaded', function () {
+                        var enough = document.getElementById('menu_request_enough');
+                        var isNew = document.getElementById('menu_request_new');
+                        if (enough) enough.addEventListener('change', syncMenuText);
+                        if (isNew) isNew.addEventListener('change', syncMenuText);
+                        syncMenuText();
+                    });
+                })();
+            </script>
+        </t>
+    </template>
+
+    <!-- ============================================================ -->
+    <!-- Thank-you page (after submit)                                -->
+    <!-- ============================================================ -->
+
+    <template id="feedback_thankyou" name="Feedback Thank You">
+        <t t-call="website.layout">
+            <t t-set="pageName" t-value="'Terima Kasih'"/>
+
+            <section class="container mt-5 mb-5">
+                <div class="row justify-content-center">
+                    <div class="col-12 col-lg-7 text-center">
+
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body p-5">
+                                <h2 class="fw-bold mb-2">Terima Kasih</h2>
+                                <p class="text-muted mb-4">
+                                    Penilaian Anda telah kami terima untuk order
+                                    <span class="fw-semibold" t-esc="order.name"/>.
+                                </p>
+
+                                <!-- Summary -->
+                                <div class="row text-center mb-4">
+                                    <div class="col-6">
+                                        <div class="text-muted small mb-1">Pengiriman</div>
+                                        <div class="fs-4 fw-bold">
+                                            <span t-esc="feedback.rating_delivery"/> / 5
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="text-muted small mb-1">Makanan</div>
+                                        <div class="fs-4 fw-bold">
+                                            <span t-esc="feedback.rating_food"/> / 5
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div t-if="feedback.feedback_text" class="alert alert-light border text-start">
+                                    <div class="text-muted small mb-1">Catatan Anda:</div>
+                                    <div t-esc="feedback.feedback_text"/>
+                                </div>
+
+                                <div t-if="feedback.menu_request == 'new' and feedback.menu_request_text"
+                                     class="alert alert-light border text-start">
+                                    <div class="text-muted small mb-1">Usulan Menu Baru:</div>
+                                    <div t-esc="feedback.menu_request_text"/>
+                                </div>
+                                <div t-if="feedback.menu_request == 'enough'"
+                                     class="text-muted small">
+                                    Anda memilih: sudah cukup, tidak perlu menu tambahan.
+                                </div>
+
+                                <hr class="my-4"/>
+
+                                <a t-attf-href="/shop/order/#{order.id}/#{order.access_token}"
+                                   class="btn btn-outline-primary">
+                                    Lihat Detail Pesanan
+                                </a>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </section>
+        </t>
+    </template>
+
+    <!-- ============================================================ -->
+    <!-- Already-submitted page                                       -->
+    <!-- ============================================================ -->
+
+    <template id="feedback_already_submitted" name="Feedback Already Submitted">
+        <t t-call="website.layout">
+            <t t-set="pageName" t-value="'Sudah Pernah Memberi Penilaian'"/>
+
+            <section class="container mt-5 mb-5">
+                <div class="row justify-content-center">
+                    <div class="col-12 col-lg-7 text-center">
+
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body p-5">
+                                <h2 class="fw-bold mb-2">Penilaian Sudah Diterima</h2>
+                                <p class="text-muted mb-4">
+                                    Anda sudah memberikan penilaian untuk order
+                                    <span class="fw-semibold" t-esc="order.name"/>.
+                                    Terima kasih atas waktu Anda.
+                                </p>
+
+                                <div class="row text-center mb-4">
+                                    <div class="col-6">
+                                        <div class="text-muted small mb-1">Pengiriman</div>
+                                        <div class="fs-4 fw-bold">
+                                            <span t-esc="feedback.rating_delivery"/> / 5
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="text-muted small mb-1">Makanan</div>
+                                        <div class="fs-4 fw-bold">
+                                            <span t-esc="feedback.rating_food"/> / 5
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <a t-attf-href="/shop/order/#{order.id}/#{order.access_token}"
+                                   class="btn btn-outline-primary">
+                                    Lihat Detail Pesanan
+                                </a>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </section>
+        </t>
+    </template>
+
 </odoo>

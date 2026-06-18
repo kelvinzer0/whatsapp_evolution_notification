@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ============================================================ -->
+    <!-- WhatsApp Order Feedback: List View                          -->
+    <!-- ============================================================ -->
+
+    <record id="whatsapp_order_feedback_view_list" model="ir.ui.view">
+        <field name="name">whatsapp.order.feedback.list</field>
+        <field name="model">whatsapp.order.feedback</field>
+        <field name="arch" type="xml">
+            <tree string="Order Feedback" decoration-success="rating_food &gt;= 4 and rating_delivery &gt;= 4"
+                  decoration-danger="rating_food &lt;= 2 or rating_delivery &lt;= 2">
+                <field name="submitted_at"/>
+                <field name="order_name"/>
+                <field name="partner_id"/>
+                <field name="rating_delivery"/>
+                <field name="rating_food"/>
+                <field name="menu_request"/>
+                <field name="order_state"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- ============================================================ -->
+    <!-- WhatsApp Order Feedback: Form View                          -->
+    <!-- ============================================================ -->
+
+    <record id="whatsapp_order_feedback_view_form" model="ir.ui.view">
+        <field name="name">whatsapp.order.feedback.form</field>
+        <field name="model">whatsapp.order.feedback</field>
+        <field name="arch" type="xml">
+            <form string="Order Feedback" edit="false" create="false">
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_open_order" type="object"
+                                string="Open Order" class="btn-secondary"
+                                icon="fa-arrow-right"/>
+                    </div>
+                    <group>
+                        <group string="Info">
+                            <field name="sale_order_id" readonly="1"/>
+                            <field name="order_name" readonly="1"/>
+                            <field name="partner_id" readonly="1"/>
+                            <field name="order_state" readonly="1"/>
+                            <field name="submitted_at" readonly="1"/>
+                        </group>
+                        <group string="Rating">
+                            <field name="rating_delivery" widget="priority"
+                                   options="{'max': 5}" readonly="1"/>
+                            <field name="rating_food" widget="priority"
+                                   options="{'max': 5}" readonly="1"/>
+                            <field name="menu_request" readonly="1"/>
+                        </group>
+                    </group>
+                    <group string="Feedback">
+                        <field name="feedback_text" readonly="1"/>
+                    </group>
+                    <group string="Usulan Menu Baru"
+                           invisible="menu_request != 'new'">
+                        <field name="menu_request_text" readonly="1"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ============================================================ -->
+    <!-- WhatsApp Order Feedback: Search View                        -->
+    <!-- ============================================================ -->
+
+    <record id="whatsapp_order_feedback_view_search" model="ir.ui.view">
+        <field name="name">whatsapp.order.feedback.search</field>
+        <field name="model">whatsapp.order.feedback</field>
+        <field name="arch" type="xml">
+            <search string="Feedback">
+                <field name="order_name"/>
+                <field name="partner_id"/>
+                <field name="sale_order_id"/>
+                <field name="feedback_text"/>
+                <field name="menu_request_text"/>
+                <separator/>
+                <filter name="filter_high_rating" string="Rating Tinggi (4-5)"
+                        domain="[('rating_food','&gt;=',4),('rating_delivery','&gt;=',4)]"/>
+                <filter name="filter_low_rating" string="Rating Rendah (1-2)"
+                        domain="['|',('rating_food','&lt;=',2),('rating_delivery','&lt;=',2)]"/>
+                <filter name="filter_menu_request" string="Ada Usulan Menu"
+                        domain="[('menu_request','=','new')]"/>
+                <separator/>
+                <filter name="group_partner" string="Customer"
+                        context="{'group_by':'partner_id'}"/>
+                <filter name="group_menu_request" string="Permintaan Menu"
+                        context="{'group_by':'menu_request'}"/>
+                <filter name="group_month" string="Bulan"
+                        context="{'group_by':'submitted_at:month'}"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- ============================================================ -->
+    <!-- Action + Menu                                                -->
+    <!-- ============================================================ -->
+
+    <record id="action_whatsapp_order_feedback" model="ir.actions.act_window">
+        <field name="name">Order Feedback</field>
+        <field name="res_model">whatsapp.order.feedback</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="whatsapp_order_feedback_view_search"/>
+        <field name="context">{'search_default_filter_high_rating': 0}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Belum ada feedback dari customer
+            </p>
+            <p>
+                Feedback dari customer yang sudah submit via link feedback akan muncul di sini.
+                Customer hanya bisa submit 1x per order.
+            </p>
+        </field>
+    </record>
+
+    <menuitem id="menu_whatsapp_order_feedback"
+              name="Order Feedback"
+              parent="menu_whatsapp_root"
+              action="action_whatsapp_order_feedback"
+              sequence="20"/>
+
+</odoo>
