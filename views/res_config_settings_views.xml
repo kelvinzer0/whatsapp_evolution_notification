@@ -45,7 +45,10 @@
                     <setting id="whatsapp_trigger_cod_waiting" string="COD Siap Dikirim">
                         <field name="whatsapp_trigger_cod_waiting"/>
                     </setting>
-                    <setting id="whatsapp_trigger_order_delivered" string="Pesanan Dikirim">
+                    <setting id="whatsapp_trigger_order_cooking" string="Pesanan Sedang Dimasak">
+                        <field name="whatsapp_trigger_order_cooking"/>
+                    </setting>
+                    <setting id="whatsapp_trigger_order_delivered" string="Pesanan Dalam Pengiriman">
                         <field name="whatsapp_trigger_order_delivered"/>
                     </setting>
                     <setting id="whatsapp_trigger_order_done" string="Pesanan Selesai">

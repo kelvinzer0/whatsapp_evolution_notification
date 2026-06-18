@@ -69,8 +69,13 @@ class ResConfigSettings(models.TransientModel):
         default=True,
     )
     whatsapp_trigger_order_delivered = fields.Boolean(
-        string='Pesanan Dikirim',
+        string='Pesanan Dalam Pengiriman',
         config_parameter='whatsapp_evolution.trigger_order_delivered',
+        default=True,
+    )
+    whatsapp_trigger_order_cooking = fields.Boolean(
+        string='Pesanan Sedang Dimasak',
+        config_parameter='whatsapp_evolution.trigger_order_cooking',
         default=True,
     )
     whatsapp_trigger_order_done = fields.Boolean(

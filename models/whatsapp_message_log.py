@@ -35,7 +35,8 @@ class WhatsappMessageLog(models.Model):
 
     trigger = fields.Selection([
         ('order_received', 'Order Diterima'),
-        ('order_delivered', 'Pesanan Dikirim'),
+        ('order_cooking', 'Pesanan Sedang Dimasak'),
+        ('order_delivered', 'Pesanan Dalam Pengiriman'),
         ('order_done', 'Pesanan Selesai'),
         ('order_cancelled', 'Pesanan Dibatalkan'),
         ('qris_pending_verification', 'QRIS Menunggu Verifikasi'),

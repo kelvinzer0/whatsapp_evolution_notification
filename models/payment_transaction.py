@@ -160,53 +160,50 @@ class PaymentTransaction(models.Model):
     # ============================================================
 
     def _whatsapp_build_qris_pending_text(self):
-        """Format singkat dengan emoji:
-        '⏳ Pembayaran QRIS untuk order X menunggu verifikasi admin.'
+        """Format premium restoran, no emoji:
+        *Pembayaran QRIS Menunggu Verifikasi*
+        Order S00021
         """
         self.ensure_one()
         so_name = self.sale_order_ids[0].name if self.sale_order_ids else self.reference
-        return "\u23F3 Pembayaran QRIS untuk order {order} menunggu verifikasi admin.".format(
-            order=so_name,
-        )
+        return "*Pembayaran QRIS Menunggu Verifikasi*\nOrder %s" % so_name
 
     def _whatsapp_build_qris_paid_text(self):
-        """Format singkat dengan emoji:
-        '✅ Pembayaran QRIS diterima pada order X.'
+        """Format premium restoran, no emoji:
+        *Pembayaran QRIS Diterima*
+        Order S00021
         """
         self.ensure_one()
         so_name = self.sale_order_ids[0].name if self.sale_order_ids else self.reference
-        return "\u2705 Pembayaran QRIS diterima pada order {order}.".format(
-            order=so_name,
-        )
+        return "*Pembayaran QRIS Diterima*\nOrder %s" % so_name
 
     def _whatsapp_build_qris_rejected_text(self, reason=''):
-        """Format singkat dengan emoji:
-        '❌ Pembayaran QRIS ditolak pada order X. Alasan: ...'
-        Alasan opsional ditambahkan kalau ada.
+        """Format premium restoran, no emoji:
+        *Pembayaran QRIS Ditolak*
+        Order S00021
+
+        Alasan: ...
         """
         self.ensure_one()
         so_name = self.sale_order_ids[0].name if self.sale_order_ids else self.reference
-        text = "\u274C Pembayaran QRIS ditolak pada order {order}.".format(
-            order=so_name,
-        )
+        text = "*Pembayaran QRIS Ditolak*\nOrder %s" % so_name
         # Normalize reason: bisa str, list (dari RPC), atau None
         if isinstance(reason, (list, tuple)):
             reason = ' '.join(str(r) for r in reason if r)
         elif reason is False:
             reason = ''
         if reason:
-            text += " Alasan: " + str(reason)
+            text += "\n\nAlasan: " + str(reason)
         return text
 
     def _whatsapp_build_cod_waiting_text(self):
-        """Format singkat dengan emoji:
-        '📦 Pesanan COD X siap dikirim.'
+        """Format premium restoran, no emoji:
+        *Pesanan Siap Dikirim*
+        Order S00015 — COD
         """
         self.ensure_one()
         so_name = self.sale_order_ids[0].name if self.sale_order_ids else self.reference
-        return "\U0001F4E6 Pesanan COD {order} siap dikirim.".format(
-            order=so_name,
-        )
+        return "*Pesanan Siap Dikirim*\nOrder %s \u2014 COD" % so_name
 
     # ============================================================
     # TRIGGER methods (dipanggil dari override atas)

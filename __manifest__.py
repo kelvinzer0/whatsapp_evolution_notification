@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'WhatsApp Evolution API Notification',
-    'version': '17.0.1.2.0',
+    'version': '17.0.1.3.0',
     'category': 'Website/Website',
     'summary': 'Notifikasi WhatsApp otomatis ke customer via Evolution API untuk setiap perubahan status pesanan',
     'description': """
@@ -11,28 +11,21 @@ WhatsApp Evolution API Notification
 Modul Odoo 17 untuk kirim notifikasi WhatsApp ke customer otomatis setiap
 perubahan status pesanan, menggunakan Evolution API (https://evolution.warunglakku.com).
 
-Trigger yang didukung (dengan emoji prefix):
-- 🛒 Order diterima (sale order confirmed) -> kirim DETAIL ORDER + URL portal
-- ⏳ QRIS menunggu verifikasi -> status update (opsional, default OFF)
-- ✅ Pembayaran QRIS diterima (admin verify) -> status update biasa
-- ❌ Pembayaran QRIS ditolak (admin reject) -> status update + alasan
-- 📦 COD siap dikirim -> status update biasa
-- 🚚 Pesanan dikirim (website_order_stage -> out_for_delivery) -> status update
-- ✅ Pesanan selesai (done) -> status update biasa
-- ❌ Pesanan dibatalkan (cancelled) -> status update biasa
+Format pesan: PREMIUM, no emoji, clean modern look.
+Menggunakan WhatsApp markdown *bold* untuk emphasis.
+To-the-point, no greeting, langsung ke isi.
 
-Format pesan: TO-THE-POINT, no greeting (langsung ke isi).
-Emoji prefix memudahkan customer mengenali jenis update.
-
-Pesan "Order diterima" menyertakan:
-- Nomor order
-- Detail item (nama produk, qty, harga, subtotal)
-- Total
-- URL halaman public read-only untuk detail pesanan
-
-Pesan update status berikutnya sangat singkat:
-- Emoji + status + nomor order
-- (Tidak ada URL di pesan update — customer sudah punya link dari notif pertama)
+Alur trigger (proses restoran/warung makan):
+- *Order Diterima*  (sale confirmed) -> kirim DETAIL ORDER + URL portal
+  Format: header PESANAN DITERIMA + No. Order + Tanggal + Metode + Item + Total + URL
+- *Pembayaran QRIS Menunggu Verifikasi*  (opsional, default OFF)
+- *Pembayaran QRIS Diterima*  (admin verify)
+- *Pembayaran QRIS Ditolak*  (admin reject) + Alasan
+- *Pesanan Siap Dikirim*  (COD tx created)
+- *Pesanan Sedang Dimasak*  (website_order_stage -> cooking)
+- *Pesanan Dalam Pengiriman*  (website_order_stage -> out_for_delivery)
+- *Pesanan Selesai*  (state -> done) + "Terima kasih telah memesan di {store}."
+- *Pesanan Dibatalkan*  (state -> cancelled)
 
 Halaman public read-only: /shop/order/<order_id>/<access_token>
 - Akses tanpa login

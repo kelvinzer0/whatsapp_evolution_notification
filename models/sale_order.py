@@ -1,20 +1,21 @@
 # -*- coding: utf-8 -*-
 """Sale Order hooks: kirim WA saat status berubah.
 
-Trigger:
-- order_received: draft/sent -> sale (confirmed)         emoji: 🛒
-- order_delivered: website_order_stage -> out_for_delivery  emoji: 🚚
-- order_done: -> done (invoiced & closed)                emoji: ✅
-- order_cancelled: -> cancelled                          emoji: ❌
+Trigger (alur restoran/warung makan):
+- order_received: draft/sent -> sale (confirmed)         "PESANAN DITERIMA" (detail)
+- order_cooking:   website_order_stage -> 'cooking'      "Pesanan Sedang Dimasak"
+- order_delivered: website_order_stage -> 'out_for_delivery'  "Pesanan Dalam Pengiriman"
+- order_done:      state -> 'done'                       "Pesanan Selesai"
+- order_cancelled: state -> 'cancel'                     "Pesanan Dibatalkan"
+
+Format pesan: PREMIUM, no emoji (clean modern look).
+Menggunakan WhatsApp markdown *bold* untuk emphasis.
+To-the-point, no greeting, langsung ke isi.
 
 Hanya trigger jika:
 - Config master switch ON
 - Trigger spesifik ON di config
 - Customer punya nomor WA (mobile/phone)
-- Order berasal dari website (website_sale) atau minimal ada partner_id
-
-Format pesan: TO-THE-POINT, no greeting, langsung ke isi.
-Emoji prefix sesuai status untuk memudahkan customer mengenali jenis update.
 """
 
 import logging
@@ -60,16 +61,14 @@ class SaleOrder(models.Model):
         return res
 
     # ============================================================
-    # HOOK: delivery & done via write()
-    # - state -> 'done'                    => order_done
-    # - website_order_stage -> 'out_for_delivery'  => order_delivered
+    # HOOK: stage transitions via write()
+    # - website_order_stage -> 'cooking'             => order_cooking
+    # - website_order_stage -> 'out_for_delivery'    => order_delivered
+    # - state -> 'done'                              => order_done
     # ============================================================
 
     def write(self, vals):
-        """Deteksi transisi:
-        - state ke 'done' => trigger WA 'Pesanan Selesai'
-        - website_order_stage ke 'out_for_delivery' => trigger WA 'Pesanan Dikirim'
-        """
+        """Deteksi transisi stage/state untuk trigger WA."""
         before_state = {}
         before_stage = {}
         if 'state' in vals:
@@ -97,6 +96,16 @@ class SaleOrder(models.Model):
             new_stage = vals['website_order_stage']
             for order in self:
                 old_stage = before_stage.get(order.id)
+                # Cooking trigger
+                if old_stage != 'cooking' and new_stage == 'cooking':
+                    try:
+                        order._whatsapp_notify_order_cooking()
+                    except Exception as e:
+                        _logger.exception(
+                            "[WA] Failed notify order_cooking for %s: %s",
+                            order.name, e,
+                        )
+                # Out-for-delivery trigger
                 if old_stage != 'out_for_delivery' and new_stage == 'out_for_delivery':
                     try:
                         order._whatsapp_notify_order_delivered()
@@ -167,14 +176,28 @@ class SaleOrder(models.Model):
             return str(amount)
 
     # ============================================================
-    # BUILD TEXT
+    # BUILD TEXT — premium format, no emoji, *bold* WA markdown
     # ============================================================
 
     def _whatsapp_build_order_received_text(self):
         """Pesan DETAIL untuk order diterima (initial message).
 
-        Format to-the-point, no greeting, langsung ke isi.
-        Emoji header 🛒 untuk menandai ini notifikasi order baru.
+        Format restoran premium:
+        *Warung Lakku*
+        PESANAN DITERIMA
+
+        No. Order : S00024
+        Tanggal   : 18/06/2026 13:00
+        Metode    : QRIS
+
+        *Item Pesanan*
+        • Nasi Goreng x2 — Rp 30.000
+        • Es Teh x1 — Rp 5.000
+
+        *Total: Rp 35.000*
+
+        Detail pesanan:
+        https://...
         """
         self.ensure_one()
         store = self._whatsapp_get_store_name()
@@ -187,21 +210,24 @@ class SaleOrder(models.Model):
             name = line.product_id.name or line.name or ''
             qty = int(line.product_uom_qty) if line.product_uom_qty == int(line.product_uom_qty) else line.product_uom_qty
             price = self._whatsapp_format_rupiah(line.price_subtotal)
-            lines_text.append('- %s x%d (%s)' % (name, qty, price))
+            lines_text.append('\u2022 %s x%d \u2014 %s' % (name, qty, price))
 
         items = '\n'.join(lines_text) if lines_text else '(tidak ada item)'
 
         text = (
-            "\U0001F6D2 Pesanan {order} di {store} telah diterima.\n\n"
-            "No. Order: {order}\n"
-            "Tanggal: {date}\n"
-            "Metode: {payment}\n\n"
-            "Item:\n{items}\n\n"
-            "Total: {total}\n\n"
-            "Detail: {url}"
+            "*{store}*\n"
+            "PESANAN DITERIMA\n\n"
+            "No. Order : {order}\n"
+            "Tanggal   : {date}\n"
+            "Metode    : {payment}\n\n"
+            "*Item Pesanan*\n"
+            "{items}\n\n"
+            "*Total: {total}*\n\n"
+            "Detail pesanan:\n"
+            "{url}"
         ).format(
-            order=self.name,
             store=store,
+            order=self.name,
             date=fields.Datetime.from_string(self.date_order).strftime('%d/%m/%Y %H:%M') if self.date_order else '',
             payment=self._get_payment_method_label(),
             items=items,
@@ -226,30 +252,51 @@ class SaleOrder(models.Model):
             pass
         return 'Online'
 
-    def _whatsapp_build_status_update_text(self, emoji, status_label, extra_info=''):
-        """Pesan UPDATE STATUS — singkat, no greeting, no URL.
-
-        Format: '{emoji} Pesanan {order} - {status}' (+ extra_info kalau ada)
-
-        :param emoji: emoji prefix (string), mis. '🚚', '✅', '❌'
-        :param status_label: label status, mis. 'Pesanan Dikirim'
-        :param extra_info: info tambahan opsional (alasan, catatan, dll)
+    def _whatsapp_build_cooking_text(self):
+        """Format premium, no emoji:
+        *Pesanan Sedang Dimasak*
+        Order S00024
         """
         self.ensure_one()
-        text = "{emoji} Pesanan {order} - {status}".format(
-            emoji=emoji,
-            order=self.name,
-            status=status_label,
-        )
-        if extra_info:
-            text += '. ' + extra_info
-        return text
+        return "*Pesanan Sedang Dimasak*\nOrder %s" % self.name
+
+    def _whatsapp_build_delivered_text(self):
+        """Format premium, no emoji:
+        *Pesanan Dalam Pengiriman*
+        Order S00024
+        """
+        self.ensure_one()
+        return "*Pesanan Dalam Pengiriman*\nOrder %s" % self.name
+
+    def _whatsapp_build_done_text(self):
+        """Format premium, no emoji, dengan closing terima kasih:
+        *Pesanan Selesai*
+        Order S00024
+
+        Terima kasih telah memesan di Warung Lakku.
+        """
+        self.ensure_one()
+        store = self._whatsapp_get_store_name()
+        return (
+            "*Pesanan Selesai*\n"
+            "Order %s\n\n"
+            "Terima kasih telah memesan di %s."
+        ) % (self.name, store)
+
+    def _whatsapp_build_cancelled_text(self):
+        """Format premium, no emoji:
+        *Pesanan Dibatalkan*
+        Order S00023
+        """
+        self.ensure_one()
+        return "*Pesanan Dibatalkan*\nOrder %s" % self.name
 
     def _whatsapp_send_safe(self, trigger, text, payment_tx_id=False):
         """Wrapper: cek trigger enabled + kirim + log."""
         self.ensure_one()
         config_map = {
             'order_received': 'trigger_order_received',
+            'order_cooking': 'trigger_order_cooking',
             'order_delivered': 'trigger_order_delivered',
             'order_done': 'trigger_order_done',
             'order_cancelled': 'trigger_order_cancelled',
@@ -305,29 +352,26 @@ class SaleOrder(models.Model):
             },
         }
 
-    def _whatsapp_notify_order_delivered(self):
-        """Trigger: website_order_stage -> out_for_delivery (Pesanan Dikirim)."""
+    def _whatsapp_notify_order_cooking(self):
+        """Trigger: website_order_stage -> cooking (Pesanan Sedang Dimasak)."""
         for order in self:
-            text = order._whatsapp_build_status_update_text(
-                emoji='\U0001F69A',  # 🚚 delivery truck
-                status_label='Pesanan Dikirim',
-            )
+            text = order._whatsapp_build_cooking_text()
+            order._whatsapp_send_safe('order_cooking', text)
+
+    def _whatsapp_notify_order_delivered(self):
+        """Trigger: website_order_stage -> out_for_delivery (Pesanan Dalam Pengiriman)."""
+        for order in self:
+            text = order._whatsapp_build_delivered_text()
             order._whatsapp_send_safe('order_delivered', text)
 
     def _whatsapp_notify_order_done(self):
         """Trigger: state -> done (Pesanan Selesai)."""
         for order in self:
-            text = order._whatsapp_build_status_update_text(
-                emoji='\u2705',  # ✅ check mark button
-                status_label='Pesanan Selesai',
-            )
+            text = order._whatsapp_build_done_text()
             order._whatsapp_send_safe('order_done', text)
 
     def _whatsapp_notify_order_cancelled(self):
         """Trigger: state -> cancel (Pesanan Dibatalkan)."""
         for order in self:
-            text = order._whatsapp_build_status_update_text(
-                emoji='\u274C',  # ❌ cross mark
-                status_label='Pesanan Dibatalkan',
-            )
+            text = order._whatsapp_build_cancelled_text()
             order._whatsapp_send_safe('order_cancelled', text)
