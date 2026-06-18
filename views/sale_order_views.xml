@@ -9,7 +9,7 @@
         <field name="arch" type="xml">
 
             <!-- Tambah tombol di header untuk test kirim WA manual -->
-            <xpath expr="//header/button[@name='action_view_invoice']" position="before">
+            <xpath expr="//header/button[@name='action_confirm'][@id='action_confirm']" position="after">
                 <button name="action_test_send_whatsapp"
                         type="object"
                         string="Kirim WA"

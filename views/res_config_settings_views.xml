@@ -12,8 +12,8 @@
         <field name="inherit_id" ref="website.res_config_settings_view_form"/>
         <field name="arch" type="xml">
 
-            <!-- Insert block setelah website Sale settings -->
-            <xpath expr="//block[@id='website_sale_settings_container']" position="after">
+            <!-- Insert block setelah website email/marketing block -->
+            <xpath expr="//block[@id='website_email_marketing']" position="after">
                 <block title="WhatsApp Evolution API" id="whatsapp_evolution_settings_block">
                     <setting id="whatsapp_evolution_master" string="Aktifkan WhatsApp" help="Master switch untuk semua notifikasi WA">
                         <field name="whatsapp_evolution_enabled"/>

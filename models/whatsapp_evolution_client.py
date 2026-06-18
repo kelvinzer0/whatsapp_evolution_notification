@@ -26,14 +26,15 @@ DEFAULT_TIMEOUT = 20  # detik
 DEFAULT_DELAY = 1200  # ms jeda antar pesan (rate limit WhatsApp)
 
 
-class WhatsappEvolutionClient(models.AbstractModel):
+class WhatsappEvolutionClient(models.Model):
     """Helper service untuk kirim WA via Evolution API.
 
-    Tidak punya table sendiri (AbstractModel) — dipakai oleh model lain
-    via _send_whatsapp() method.
+    Model tanpa table (_auto=False) — dipakai sebagai service singleton
+    via self.env['whatsapp.evolution.client'].send_text(...)
     """
     _name = 'whatsapp.evolution.client'
     _description = 'WhatsApp Evolution API Client Service'
+    _auto = False  # tidak buat table di DB
 
     # ============================================================
     # PUBLIC API
@@ -48,7 +49,7 @@ class WhatsappEvolutionClient(models.AbstractModel):
                               untuk di-retry oleh cron
         :return: dict {success: bool, message_id: str|False, raw: dict, error: str}
         """
-        self.ensure_one()
+        # NOTE: AbstractModel — no ensure_one() since called as self.env[...]
         config = self._get_config()
         if not config.get('enabled'):
             _logger.info("[WA] Disabled, skip send to %s", number_raw)

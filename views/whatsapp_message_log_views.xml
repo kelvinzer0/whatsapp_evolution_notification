@@ -9,7 +9,7 @@
         <field name="name">whatsapp.message.log.list</field>
         <field name="model">whatsapp.message.log</field>
         <field name="arch" type="xml">
-            <list string="WhatsApp Message Logs" decoration-success="status=='success'"
+            <tree string="WhatsApp Message Logs" decoration-success="status=='success'"
                   decoration-danger="status=='failed'"
                   decoration-muted="status=='pending'">
                 <field name="create_date"/>
@@ -22,7 +22,7 @@
                 <field name="retry_count"/>
                 <field name="message_id"/>
                 <field name="company_id" column_invisible="1"/>
-            </list>
+            </tree>
         </field>
     </record>
 
@@ -138,10 +138,6 @@
               parent="menu_whatsapp_root"
               sequence="99"/>
 
-    <menuitem id="menu_whatsapp_config_settings"
-              name="Evolution API Settings"
-              parent="menu_whatsapp_config"
-              action="website.action_website_settings"
-              sequence="10"/>
+    <!-- Settings accessible via Settings > Website > WhatsApp Evolution API section -->
 
 </odoo>
