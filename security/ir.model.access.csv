@@ -1,0 +1,4 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_whatsapp_message_log_user,whatsapp.message.log user,model_whatsapp_message_log,sales_team.group_sale_manager,1,1,1,1
+access_whatsapp_message_log_salesman,whatsapp.message.log salesman,model_whatsapp_message_log,sales_team.group_sale_salesman,1,0,0,0
+access_whatsapp_message_log_portal,whatsapp.message.log portal read,model_whatsapp_message_log,base.group_portal,1,0,0,0

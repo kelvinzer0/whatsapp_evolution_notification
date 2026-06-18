@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ============================================================ -->
+    <!-- WhatsApp Message Log: List View                              -->
+    <!-- ============================================================ -->
+
+    <record id="whatsapp_message_log_view_list" model="ir.ui.view">
+        <field name="name">whatsapp.message.log.list</field>
+        <field name="model">whatsapp.message.log</field>
+        <field name="arch" type="xml">
+            <list string="WhatsApp Message Logs" decoration-success="status=='success'"
+                  decoration-danger="status=='failed'"
+                  decoration-muted="status=='pending'">
+                <field name="create_date"/>
+                <field name="trigger"/>
+                <field name="partner_id"/>
+                <field name="sale_order_id"/>
+                <field name="number_raw"/>
+                <field name="number_normalized"/>
+                <field name="status"/>
+                <field name="retry_count"/>
+                <field name="message_id"/>
+                <field name="company_id" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- ============================================================ -->
+    <!-- WhatsApp Message Log: Form View                              -->
+    <!-- ============================================================ -->
+
+    <record id="whatsapp_message_log_view_form" model="ir.ui.view">
+        <field name="name">whatsapp.message.log.form</field>
+        <field name="model">whatsapp.message.log</field>
+        <field name="arch" type="xml">
+            <form string="WhatsApp Message Log">
+                <header>
+                    <button name="retry" type="object" string="Retry Send"
+                            class="btn-primary"
+                            invisible="status != 'failed'"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group string="Info">
+                            <field name="trigger" readonly="1"/>
+                            <field name="status" readonly="1"/>
+                            <field name="partner_id" readonly="1"/>
+                            <field name="sale_order_id" readonly="1"/>
+                            <field name="payment_transaction_id" readonly="1"/>
+                            <field name="create_date" readonly="1"/>
+                            <field name="last_retry_at" readonly="1"/>
+                            <field name="retry_count" readonly="1"/>
+                        </group>
+                        <group string="Pengiriman">
+                            <field name="number_raw" readonly="1"/>
+                            <field name="number_normalized" readonly="1"/>
+                            <field name="message_id" readonly="1"/>
+                            <field name="error_message" readonly="1"/>
+                        </group>
+                    </group>
+                    <group string="Isi Pesan">
+                        <field name="message_text" readonly="1"/>
+                    </group>
+                    <group string="Response Raw">
+                        <field name="response_raw" readonly="1"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ============================================================ -->
+    <!-- WhatsApp Message Log: Search View                            -->
+    <!-- ============================================================ -->
+
+    <record id="whatsapp_message_log_view_search" model="ir.ui.view">
+        <field name="name">whatsapp.message.log.search</field>
+        <field name="model">whatsapp.message.log</field>
+        <field name="arch" type="xml">
+            <search string="WhatsApp Logs">
+                <field name="partner_id"/>
+                <field name="sale_order_id"/>
+                <field name="number_normalized"/>
+                <field name="message_id"/>
+                <field name="message_text"/>
+                <filter name="filter_failed" string="Gagal"
+                        domain="[('status','=','failed')]"/>
+                <filter name="filter_success" string="Sukses"
+                        domain="[('status','=','success')]"/>
+                <filter name="filter_today" string="Hari Ini"
+                        domain="[('create_date','&gt;=',context_today().strftime('%Y-%m-%d 00:00:00'))]"/>
+                <separator/>
+                <filter name="group_trigger" string="Trigger"
+                        context="{'group_by':'trigger'}"/>
+                <filter name="group_status" string="Status"
+                        context="{'group_by':'status'}"/>
+                <filter name="group_partner" string="Customer"
+                        context="{'group_by':'partner_id'}"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- ============================================================ -->
+    <!-- Action + Menu                                                -->
+    <!-- ============================================================ -->
+
+    <record id="action_whatsapp_message_log" model="ir.actions.act_window">
+        <field name="name">WhatsApp Logs</field>
+        <field name="res_model">whatsapp.message.log</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="whatsapp_message_log_view_search"/>
+        <field name="context">{'search_default_filter_today': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Belum ada log WhatsApp
+            </p>
+            <p>
+                Log notifikasi WhatsApp yang dikirim ke customer akan muncul di sini.
+                Anda bisa retry pesan yang gagal dari tombol "Retry Send".
+            </p>
+        </field>
+    </record>
+
+    <menuitem id="menu_whatsapp_root"
+              name="WhatsApp"
+              web_icon="whatsapp_evolution_notification,static/src/img/icon.png"
+              sequence="85"/>
+
+    <menuitem id="menu_whatsapp_message_log"
+              name="Message Logs"
+              parent="menu_whatsapp_root"
+              action="action_whatsapp_message_log"
+              sequence="10"/>
+
+    <menuitem id="menu_whatsapp_config"
+              name="Configuration"
+              parent="menu_whatsapp_root"
+              sequence="99"/>
+
+    <menuitem id="menu_whatsapp_config_settings"
+              name="Evolution API Settings"
+              parent="menu_whatsapp_config"
+              action="website.action_website_settings"
+              sequence="10"/>
+
+</odoo>

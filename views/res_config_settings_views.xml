@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ============================================================ -->
+    <!-- Settings: WhatsApp Evolution API Configuration                -->
+    <!-- ============================================================ -->
+
+    <record id="res_config_settings_view_form_whatsapp" model="ir.ui.view">
+        <field name="name">res.config.settings.view.whatsapp.evolution</field>
+        <field name="model">res.config.settings</field>
+        <field name="priority">40</field>
+        <field name="inherit_id" ref="website.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+
+            <!-- Insert block setelah website Sale settings -->
+            <xpath expr="//block[@id='website_sale_settings_container']" position="after">
+                <block title="WhatsApp Evolution API" id="whatsapp_evolution_settings_block">
+                    <setting id="whatsapp_evolution_master" string="Aktifkan WhatsApp" help="Master switch untuk semua notifikasi WA">
+                        <field name="whatsapp_evolution_enabled"/>
+                    </setting>
+                    <setting id="whatsapp_evolution_endpoint" string="Konfigurasi API" help="Endpoint Evolution API">
+                        <field name="whatsapp_evolution_base_url" placeholder="https://evolution.warunglakku.com"/>
+                        <field name="whatsapp_evolution_instance_name" placeholder="Warung Lakku"/>
+                        <field name="whatsapp_evolution_api_key" password="True" placeholder="API Key"/>
+                        <button name="action_test_connection" type="object" string="Test Connection" class="btn-primary"/>
+                    </setting>
+                    <setting id="whatsapp_branding" string="Branding">
+                        <field name="whatsapp_store_name" placeholder="Warung Lakku"/>
+                        <field name="whatsapp_portal_base_url" placeholder="https://odoo.warunglakku.com"/>
+                    </setting>
+
+                    <h2>Trigger Status Pesanan</h2>
+                    <setting id="whatsapp_trigger_order_received" string="Order Diterima (detail + URL)">
+                        <field name="whatsapp_trigger_order_received"/>
+                    </setting>
+                    <setting id="whatsapp_trigger_qris_pending" string="QRIS Menunggu Verifikasi">
+                        <field name="whatsapp_trigger_qris_pending"/>
+                    </setting>
+                    <setting id="whatsapp_trigger_qris_paid" string="QRIS Dibayar">
+                        <field name="whatsapp_trigger_qris_paid"/>
+                    </setting>
+                    <setting id="whatsapp_trigger_qris_rejected" string="QRIS Ditolak">
+                        <field name="whatsapp_trigger_qris_rejected"/>
+                    </setting>
+                    <setting id="whatsapp_trigger_cod_waiting" string="COD Siap Dikirim">
+                        <field name="whatsapp_trigger_cod_waiting"/>
+                    </setting>
+                    <setting id="whatsapp_trigger_order_delivered" string="Pesanan Dikirim">
+                        <field name="whatsapp_trigger_order_delivered"/>
+                    </setting>
+                    <setting id="whatsapp_trigger_order_done" string="Pesanan Selesai">
+                        <field name="whatsapp_trigger_order_done"/>
+                    </setting>
+                    <setting id="whatsapp_trigger_order_cancelled" string="Pesanan Dibatalkan">
+                        <field name="whatsapp_trigger_order_cancelled"/>
+                    </setting>
+                </block>
+            </xpath>
+
+        </field>
+    </record>
+
+</odoo>

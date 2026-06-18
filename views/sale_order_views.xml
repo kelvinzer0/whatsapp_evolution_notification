@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Tambah tombol "Send WA Test" di sale.order form -->
+    <record id="sale_order_view_form_whatsapp_test" model="ir.ui.view">
+        <field name="name">sale.order.form.whatsapp.test</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+
+            <!-- Tambah tombol di header untuk test kirim WA manual -->
+            <xpath expr="//header/button[@name='action_view_invoice']" position="before">
+                <button name="action_test_send_whatsapp"
+                        type="object"
+                        string="Kirim WA"
+                        class="btn-secondary"
+                        groups="sales_team.group_sale_manager"/>
+            </xpath>
+
+        </field>
+    </record>
+
+</odoo>
