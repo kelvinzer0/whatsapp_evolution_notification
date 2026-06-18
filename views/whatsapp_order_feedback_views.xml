@@ -98,15 +98,15 @@
     </record>
 
     <!-- ============================================================ -->
-    <!-- Action + Menu                                                -->
+    <!-- Actions (one per submenu so each has its own default filter) -->
     <!-- ============================================================ -->
 
+    <!-- Action: All Feedback (no default filter) -->
     <record id="action_whatsapp_order_feedback" model="ir.actions.act_window">
-        <field name="name">Order Feedback</field>
+        <field name="name">Semua Feedback</field>
         <field name="res_model">whatsapp.order.feedback</field>
         <field name="view_mode">list,form</field>
         <field name="search_view_id" ref="whatsapp_order_feedback_view_search"/>
-        <field name="context">{'search_default_filter_high_rating': 0}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
                 Belum ada feedback dari customer
@@ -118,10 +118,91 @@
         </field>
     </record>
 
-    <menuitem id="menu_whatsapp_order_feedback"
-              name="Order Feedback"
-              parent="menu_whatsapp_root"
+    <!-- Action: Rating Tinggi (default filter) -->
+    <record id="action_whatsapp_order_feedback_high" model="ir.actions.act_window">
+        <field name="name">Rating Tinggi (4-5)</field>
+        <field name="res_model">whatsapp.order.feedback</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="whatsapp_order_feedback_view_search"/>
+        <field name="context">{'search_default_filter_high_rating': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Belum ada feedback dengan rating tinggi
+            </p>
+            <p>
+                Feedback dengan rating 4-5 bintang untuk kedua kategori (pengiriman &amp; makanan)
+                akan muncul di sini.
+            </p>
+        </field>
+    </record>
+
+    <!-- Action: Rating Rendah (default filter) -->
+    <record id="action_whatsapp_order_feedback_low" model="ir.actions.act_window">
+        <field name="name">Rating Rendah (1-2)</field>
+        <field name="res_model">whatsapp.order.feedback</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="whatsapp_order_feedback_view_search"/>
+        <field name="context">{'search_default_filter_low_rating': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Belum ada feedback dengan rating rendah
+            </p>
+            <p>
+                Feedback dengan rating 1-2 bintang (perlu tindak lanjut) akan muncul di sini.
+                Hubungi customer untuk minta detail masalahnya.
+            </p>
+        </field>
+    </record>
+
+    <!-- Action: Usulan Menu Baru (default filter) -->
+    <record id="action_whatsapp_order_feedback_menu_requests" model="ir.actions.act_window">
+        <field name="name">Usulan Menu Baru</field>
+        <field name="res_model">whatsapp.order.feedback</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="whatsapp_order_feedback_view_search"/>
+        <field name="context">{'search_default_filter_menu_request': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Belum ada usulan menu baru
+            </p>
+            <p>
+                Customer yang memilih "Ada Usulan Menu Baru" di form feedback akan muncul di sini,
+                lengkap dengan tulisan usulan mereka.
+            </p>
+        </field>
+    </record>
+
+    <!-- ============================================================ -->
+    <!-- TOP-LEVEL APP MENU: Feedback                                 -->
+    <!-- ============================================================ -->
+
+    <menuitem id="menu_feedback_root"
+              name="Feedback"
+              web_icon="whatsapp_evolution_notification,static/src/img/icon.png"
+              sequence="80"/>
+
+    <menuitem id="menu_feedback_all"
+              name="Semua Feedback"
+              parent="menu_feedback_root"
               action="action_whatsapp_order_feedback"
+              sequence="10"/>
+
+    <menuitem id="menu_feedback_high"
+              name="Rating Tinggi (4-5)"
+              parent="menu_feedback_root"
+              action="action_whatsapp_order_feedback_high"
               sequence="20"/>
+
+    <menuitem id="menu_feedback_low"
+              name="Rating Rendah (1-2)"
+              parent="menu_feedback_root"
+              action="action_whatsapp_order_feedback_low"
+              sequence="30"/>
+
+    <menuitem id="menu_feedback_menu_requests"
+              name="Usulan Menu Baru"
+              parent="menu_feedback_root"
+              action="action_whatsapp_order_feedback_menu_requests"
+              sequence="40"/>
 
 </odoo>

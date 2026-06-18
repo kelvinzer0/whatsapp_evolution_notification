@@ -139,5 +139,6 @@
               sequence="99"/>
 
     <!-- Settings accessible via Settings > Website > WhatsApp Evolution API section -->
+    <!-- Order Feedback sekarang punya top-level menu sendiri: menu_feedback_root -->
 
 </odoo>
