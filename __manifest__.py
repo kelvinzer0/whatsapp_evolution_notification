@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'WhatsApp Evolution API Notification',
-    'version': '17.0.1.4.1',
+    'version': '17.0.1.4.2',
     'category': 'Website/Website',
     'summary': 'Notifikasi WhatsApp otomatis ke customer via Evolution API untuk setiap perubahan status pesanan',
     'description': """

@@ -46,10 +46,8 @@
                             <field name="submitted_at" readonly="1"/>
                         </group>
                         <group string="Rating">
-                            <field name="rating_delivery" widget="priority"
-                                   options="{'max': 5}" readonly="1"/>
-                            <field name="rating_food" widget="priority"
-                                   options="{'max': 5}" readonly="1"/>
+                            <field name="rating_delivery" readonly="1"/>
+                            <field name="rating_food" readonly="1"/>
                             <field name="menu_request" readonly="1"/>
                         </group>
                     </group>
