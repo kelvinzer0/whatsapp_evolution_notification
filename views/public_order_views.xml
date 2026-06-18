@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ============================================================ -->
+    <!-- Public read-only order detail page                           -->
+    <!-- Route: /shop/order/<order_id>/<access_token>                 -->
+    <!-- ============================================================ -->
+
+    <template id="public_order_view" name="Public Order Detail (Read-only)">
+        <t t-call="website.layout">
+            <t t-set="pageName" t-value="'Detail Pesanan'"/>
+
+            <section class="container mt-4 mb-5">
+                <div class="row justify-content-center">
+                    <div class="col-12 col-lg-8">
+
+                        <!-- Header: Store name + order number -->
+                        <div class="card mb-3">
+                            <div class="card-header bg-light">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h4 class="mb-0">
+                                        <span t-esc="order.company_id.name"/>
+                                    </h4>
+                                    <span class="badge bg-primary" t-esc="state_label"/>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-6">
+                                        <div class="text-muted small">No. Order</div>
+                                        <div class="fw-bold" t-esc="order.name"/>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="text-muted small">Tanggal</div>
+                                        <div t-esc="order.date_order" t-options="{'widget': 'datetime'}"/>
+                                    </div>
+                                </div>
+                                <div class="row mt-3" t-if="payment_method">
+                                    <div class="col-6">
+                                        <div class="text-muted small">Metode Pembayaran</div>
+                                        <div t-esc="payment_method"/>
+                                    </div>
+                                    <div class="col-6" t-if="order.partner_id">
+                                        <div class="text-muted small">Customer</div>
+                                        <div t-esc="order.partner_id.name"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Items table -->
+                        <div class="card mb-3">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0">Item Pesanan</h5>
+                            </div>
+                            <div class="card-body p-0">
+                                <table class="table table-striped mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Produk</th>
+                                            <th class="text-end">Qty</th>
+                                            <th class="text-end">Harga</th>
+                                            <th class="text-end">Subtotal</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr t-foreach="lines" t-as="line">
+                                            <td t-esc="line['name']"/>
+                                            <td class="text-end" t-esc="line['qty']"/>
+                                            <td class="text-end">
+                                                <span t-esc="line['price_unit']"
+                                                      t-options="{'widget': 'monetary', 'display_currency': order.currency_id}"/>
+                                            </td>
+                                            <td class="text-end">
+                                                <span t-esc="line['subtotal']"
+                                                      t-options="{'widget': 'monetary', 'display_currency': order.currency_id}"/>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="card-footer bg-white">
+                                <div class="d-flex justify-content-between">
+                                    <span class="fw-bold">Total</span>
+                                    <span class="fw-bold fs-5"
+                                          t-esc="order.amount_total"
+                                          t-options="{'widget': 'monetary', 'display_currency': order.currency_id}"/>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Read-only notice -->
+                        <div class="alert alert-info small" role="alert">
+                            Halaman ini bersifat read-only. Untuk pertanyaan atau perubahan pesanan,
+                            hubungi toko langsung.
+                        </div>
+
+                    </div>
+                </div>
+            </section>
+
+        </t>
+    </template>
+
+</odoo>

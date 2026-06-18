@@ -26,7 +26,7 @@ class PaymentTransaction(models.Model):
 
     def action_qris_user_confirm_paid(self):
         """User klik 'Saya sudah bayar' -> state pending_verification."""
-        res = super().action_qris_user_confirm_paid()
+        super().action_qris_user_confirm_paid()
         for tx in self:
             if tx.qris_state == 'pending_verification':
                 try:
@@ -34,11 +34,11 @@ class PaymentTransaction(models.Model):
                 except Exception as e:
                     _logger.exception("[WA] Failed notify qris_pending_verification for %s: %s",
                                       tx.reference, e)
-        return res
+        return True
 
     def action_qris_mark_paid(self, mutation_record=None):
         """Admin verify -> state paid."""
-        res = super().action_qris_mark_paid(mutation_record=mutation_record)
+        super().action_qris_mark_paid(mutation_record=mutation_record)
         for tx in self:
             if tx.qris_state == 'paid':
                 try:
@@ -46,11 +46,11 @@ class PaymentTransaction(models.Model):
                 except Exception as e:
                     _logger.exception("[WA] Failed notify qris_paid for %s: %s",
                                       tx.reference, e)
-        return res
+        return True
 
     def action_qris_reject(self, reason=''):
         """Admin reject -> state rejected."""
-        res = super().action_qris_reject(reason=reason)
+        super().action_qris_reject(reason=reason)
         for tx in self:
             if tx.qris_state == 'rejected':
                 try:
@@ -58,11 +58,11 @@ class PaymentTransaction(models.Model):
                 except Exception as e:
                     _logger.exception("[WA] Failed notify qris_rejected for %s: %s",
                                       tx.reference, e)
-        return res
+        return True
 
     def action_cod_mark_delivered(self):
         """Admin mark COD delivered."""
-        res = super().action_cod_mark_delivered()
+        super().action_cod_mark_delivered()
         for tx in self:
             if tx.cod_state == 'delivered':
                 try:
@@ -70,7 +70,7 @@ class PaymentTransaction(models.Model):
                 except Exception as e:
                     _logger.exception("[WA] Failed notify cod_delivered for %s: %s",
                                       tx.reference, e)
-        return res
+        return True
 
     # ============================================================
     # PRIVATE: build text + send
@@ -100,14 +100,18 @@ class PaymentTransaction(models.Model):
         return partner.id if partner else False
 
     def _whatsapp_get_portal_url(self):
-        """URL portal customer untuk sale order terkait."""
+        """URL public read-only untuk sale order terkait."""
         self.ensure_one()
         ICP = self.env['ir.config_parameter'].sudo()
         base = (ICP.get_param('whatsapp_evolution.portal_base_url')
                 or 'https://odoo.warunglakku.com').rstrip('/')
         if self.sale_order_ids:
-            return '%s/my/orders/%d' % (base, self.sale_order_ids[0].id)
-        return base + '/my/orders'
+            so = self.sale_order_ids[0]
+            # Generate token kalau belum ada (delegasikan ke sale.order method)
+            if not so.access_token:
+                so._generate_access_token_safe()
+            return '%s/shop/order/%d/%s' % (base, so.id, so.access_token or 'NO_TOKEN')
+        return base + '/shop'
 
     def _whatsapp_get_store_name(self):
         ICP = self.env['ir.config_parameter'].sudo()
@@ -156,93 +160,49 @@ class PaymentTransaction(models.Model):
     # ============================================================
 
     def _whatsapp_build_qris_pending_text(self):
+        """Format singkat: 'Pembayaran QRIS untuk order X menunggu verifikasi admin.'"""
         self.ensure_one()
-        store = self._whatsapp_get_store_name()
-        url = self._whatsapp_get_portal_url()
-        partner_name = (self.partner_id.name
-                        or (self.sale_order_ids[0].partner_id.name if self.sale_order_ids else '')
-                        or 'Pelanggan')
         so_name = self.sale_order_ids[0].name if self.sale_order_ids else self.reference
-        text = (
-            "Halo {name},\n\n"
-            "Terima kasih, konfirmasi pembayaran QRIS untuk pesanan *{order}* telah kami terima.\n"
-            "Status: *Menunggu Verifikasi Admin* (estimasi ~5-15 menit)\n\n"
-            "Lihat detail: {url}\n\n"
-            "Terima kasih atas kesabaran Anda."
-        ).format(
-            name=partner_name,
+        return "Pembayaran QRIS untuk order {order} menunggu verifikasi admin.".format(
             order=so_name,
-            url=url,
         )
-        return text
 
     def _whatsapp_build_qris_paid_text(self):
+        """Format singkat sesuai requirement:
+        'Pembayaran QRIS diterima pada order X.'
+        """
         self.ensure_one()
-        store = self._whatsapp_get_store_name()
-        url = self._whatsapp_get_portal_url()
-        partner_name = (self.partner_id.name
-                        or (self.sale_order_ids[0].partner_id.name if self.sale_order_ids else '')
-                        or 'Pelanggan')
         so_name = self.sale_order_ids[0].name if self.sale_order_ids else self.reference
-        text = (
-            "Halo {name},\n\n"
-            "Pembayaran QRIS untuk pesanan *{order}* telah *DIVERIFIKASI*.\n"
-            "Status: *Pembayaran Diterima* - pesanan Anda akan segera kami proses.\n\n"
-            "Lihat detail: {url}\n\n"
-            "Terima kasih telah berbelanja di {store}."
-        ).format(
-            name=partner_name,
+        return "Pembayaran QRIS diterima pada order {order}.".format(
             order=so_name,
-            url=url,
-            store=store,
         )
-        return text
 
     def _whatsapp_build_qris_rejected_text(self, reason=''):
+        """Format singkat sesuai requirement:
+        'Pembayaran QRIS ditolak pada order X.'
+        Alasan opsional ditambahkan kalau ada.
+        """
         self.ensure_one()
-        store = self._whatsapp_get_store_name()
-        url = self._whatsapp_get_portal_url()
-        partner_name = (self.partner_id.name
-                        or (self.sale_order_ids[0].partner_id.name if self.sale_order_ids else '')
-                        or 'Pelanggan')
         so_name = self.sale_order_ids[0].name if self.sale_order_ids else self.reference
-        reason_text = ('Alasan: ' + reason) if reason else ''
-        text = (
-            "Halo {name},\n\n"
-            "Mohon maaf, pembayaran QRIS untuk pesanan *{order}* *DITOLAK* oleh admin.\n"
-            "{reason}\n\n"
-            "Silakan ulangi pembayaran atau hubungi kami untuk bantuan.\n"
-            "Lihat detail: {url}\n\n"
-            "Terima kasih."
-        ).format(
-            name=partner_name,
+        text = "Pembayaran QRIS ditolak pada order {order}.".format(
             order=so_name,
-            reason=reason_text,
-            url=url,
         )
+        # Normalize reason: bisa str, list (dari RPC), atau None
+        if isinstance(reason, (list, tuple)):
+            reason = ' '.join(str(r) for r in reason if r)
+        elif reason is False:
+            reason = ''
+        if reason:
+            text += " Alasan: " + str(reason)
         return text
 
     def _whatsapp_build_cod_waiting_text(self):
+        """Format singkat: 'Pesanan COD X siap dikirim.'"""
         self.ensure_one()
-        store = self._whatsapp_get_store_name()
-        url = self._whatsapp_get_portal_url()
-        partner_name = (self.partner_id.name
-                        or (self.sale_order_ids[0].partner_id.name if self.sale_order_ids else '')
-                        or 'Pelanggan')
         so_name = self.sale_order_ids[0].name if self.sale_order_ids else self.reference
-        text = (
-            "Halo {name},\n\n"
-            "Pesanan COD *{order}* sedang kami siapkan dan akan segera dikirim.\n"
-            "Status: *Siap Dikirim (COD)*\n"
-            "Pastikan Anda menyiapkan uang tunai sesuai total pesanan.\n\n"
-            "Lihat detail: {url}\n\n"
-            "Terima kasih."
-        ).format(
-            name=partner_name,
+        return "Pesanan COD {order} siap dikirim.".format(
             order=so_name,
-            url=url,
         )
-        return text
 
     # ============================================================
     # TRIGGER methods (dipanggil dari override atas)

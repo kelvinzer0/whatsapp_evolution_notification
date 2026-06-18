@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'WhatsApp Evolution API Notification',
-    'version': '17.0.1.0.0',
+    'version': '17.0.1.1.0',
     'category': 'Website/Website',
     'summary': 'Notifikasi WhatsApp otomatis ke customer via Evolution API untuk setiap perubahan status pesanan',
     'description': """
@@ -57,6 +57,7 @@ Author: Warung Lakku
         'views/res_config_settings_views.xml',
         'views/whatsapp_message_log_views.xml',
         'views/sale_order_views.xml',
+        'views/public_order_views.xml',
     ],
     'installable': True,
     'application': False,

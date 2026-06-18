@@ -101,12 +101,33 @@ class SaleOrder(models.Model):
         return partner.mobile or partner.phone or ''
 
     def _whatsapp_get_portal_url(self):
-        """URL portal customer untuk order ini."""
+        """URL public read-only untuk order ini.
+
+        Format: {base}/shop/order/{order_id}/{access_token}
+        access_token di-generate kalau belum ada (field bawaan website_sale).
+        """
         self.ensure_one()
         ICP = self.env['ir.config_parameter'].sudo()
         base = (ICP.get_param('whatsapp_evolution.portal_base_url')
                 or 'https://odoo.warunglakku.com').rstrip('/')
-        return '%s/my/orders/%d' % (base, self.id)
+        # Generate access_token kalau belum ada
+        if not self.access_token:
+            self._generate_access_token_safe()
+        return '%s/shop/order/%d/%s' % (base, self.id, self.access_token or 'NO_TOKEN')
+
+    def _generate_access_token_safe(self):
+        """Generate access_token kalau field ada (dari website_sale) dan masih kosong."""
+        self.ensure_one()
+        try:
+            if hasattr(self, 'access_token') and self._fields.get('access_token'):
+                if not self.access_token:
+                    token = self._generate_access_token() if hasattr(self, '_generate_access_token') else None
+                    if not token:
+                        import secrets
+                        token = secrets.token_urlsafe(16)
+                    self.sudo().write({'access_token': token})
+        except Exception as e:
+            _logger.warning("Failed generate access_token for SO %s: %s", self.name, e)
 
     def _whatsapp_get_store_name(self):
         ICP = self.env['ir.config_parameter'].sudo()
@@ -120,11 +141,12 @@ class SaleOrder(models.Model):
             return str(amount)
 
     def _whatsapp_build_order_received_text(self):
-        """Pesan DETAIL untuk order diterima (initial message)."""
+        """Pesan DETAIL untuk order diterima (initial message).
+        Format to-the-point, no greeting, langsung ke isi.
+        """
         self.ensure_one()
         store = self._whatsapp_get_store_name()
         url = self._whatsapp_get_portal_url()
-        partner_name = self.partner_id.name or 'Pelanggan'
 
         lines_text = []
         for line in self.order_line:
@@ -138,19 +160,16 @@ class SaleOrder(models.Model):
         items = '\n'.join(lines_text) if lines_text else '(tidak ada item)'
 
         text = (
-            "Halo {name}!\n\n"
-            "Pesanan Anda di *{store}* telah kami terima. Berikut detailnya:\n\n"
-            "No. Order: *{order}*\n"
+            "Pesanan {order} di {store} telah diterima.\n\n"
+            "No. Order: {order}\n"
             "Tanggal: {date}\n"
             "Metode: {payment}\n\n"
             "Item:\n{items}\n\n"
-            "Total: *{total}*\n\n"
-            "Lihat detail pesanan:\n{url}\n\n"
-            "Terima kasih telah berbelanja di {store}."
+            "Total: {total}\n\n"
+            "Detail: {url}"
         ).format(
-            name=partner_name,
-            store=store,
             order=self.name,
+            store=store,
             date=fields.Datetime.from_string(self.date_order).strftime('%d/%m/%Y %H:%M') if self.date_order else '',
             payment=self._get_payment_method_label(),
             items=items,
@@ -176,27 +195,16 @@ class SaleOrder(models.Model):
         return 'Online'
 
     def _whatsapp_build_status_update_text(self, status_label, extra_info=''):
-        """Pesan UPDATE STATUS biasa (bukan detail order)."""
+        """Pesan UPDATE STATUS — singkat, no greeting, no URL.
+        Format: 'Pesanan {order} - {status}' (+ extra_info kalau ada)
+        """
         self.ensure_one()
-        store = self._whatsapp_get_store_name()
-        url = self._whatsapp_get_portal_url()
-        partner_name = self.partner_id.name or 'Pelanggan'
-
-        text = (
-            "Halo {name},\n\n"
-            "Update pesanan *{order}* di {store}:\n"
-            "Status: *{status}*\n"
-            "{extra}"
-            "\nLihat detail: {url}\n\n"
-            "Terima kasih."
-        ).format(
-            name=partner_name,
+        text = "Pesanan {order} - {status}".format(
             order=self.name,
-            store=store,
             status=status_label,
-            extra=('Info: ' + extra_info + '\n') if extra_info else '',
-            url=url,
         )
+        if extra_info:
+            text += '. ' + extra_info
         return text
 
     def _whatsapp_send_safe(self, trigger, text, payment_tx_id=False):
