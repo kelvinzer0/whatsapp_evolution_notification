@@ -2,16 +2,19 @@
 """Sale Order hooks: kirim WA saat status berubah.
 
 Trigger:
-- order_received: draft/sent -> sale (confirmed)
-- order_delivered: sale -> delivered (semua picking done)
-- order_done: -> done (invoiced & closed)
-- order_cancelled: -> cancelled
+- order_received: draft/sent -> sale (confirmed)         emoji: 🛒
+- order_delivered: website_order_stage -> out_for_delivery  emoji: 🚚
+- order_done: -> done (invoiced & closed)                emoji: ✅
+- order_cancelled: -> cancelled                          emoji: ❌
 
 Hanya trigger jika:
 - Config master switch ON
 - Trigger spesifik ON di config
 - Customer punya nomor WA (mobile/phone)
 - Order berasal dari website (website_sale) atau minimal ada partner_id
+
+Format pesan: TO-THE-POINT, no greeting, langsung ke isi.
+Emoji prefix sesuai status untuk memudahkan customer mengenali jenis update.
 """
 
 import logging
@@ -24,7 +27,7 @@ class SaleOrder(models.Model):
     _inherit = 'sale.order'
 
     # ============================================================
-    # OVERRIDE: action_confirm
+    # OVERRIDE: action_confirm -> order_received
     # ============================================================
 
     def action_confirm(self):
@@ -42,12 +45,11 @@ class SaleOrder(models.Model):
 
     def action_cancel(self):
         """Hook order dibatalkan."""
-        # Catat state sebelum cancel untuk identifikasi transisi
         before_states = {so.id: so.state for so in self}
         res = super().action_cancel()
         for order in self:
             if before_states.get(order.id) == 'cancel':
-                continue  # sudah cancel sebelumnya, skip
+                continue
             try:
                 order._whatsapp_notify_order_cancelled()
             except Exception as e:
@@ -58,17 +60,29 @@ class SaleOrder(models.Model):
         return res
 
     # ============================================================
-    # HOOK: delivery & done via write() (karena tidak ada method khusus)
+    # HOOK: delivery & done via write()
+    # - state -> 'done'                    => order_done
+    # - website_order_stage -> 'out_for_delivery'  => order_delivered
     # ============================================================
 
     def write(self, vals):
-        """Deteksi transisi state ke 'done' untuk trigger WA 'Pesanan Selesai'."""
+        """Deteksi transisi:
+        - state ke 'done' => trigger WA 'Pesanan Selesai'
+        - website_order_stage ke 'out_for_delivery' => trigger WA 'Pesanan Dikirim'
+        """
+        before_state = {}
+        before_stage = {}
         if 'state' in vals:
-            before = {so.id: so.state for so in self}
+            before_state = {so.id: so.state for so in self}
+        # website_order_stage mungkin tidak ada kalau website_sale_dashboard tdk terinstall
+        if 'website_order_stage' in vals and self._fields.get('website_order_stage'):
+            before_stage = {so.id: so.website_order_stage for so in self}
+
         res = super().write(vals)
+
         if 'state' in vals:
             for order in self:
-                old = before.get(order.id)
+                old = before_state.get(order.id)
                 new = vals['state']
                 if old != 'done' and new == 'done':
                     try:
@@ -78,10 +92,23 @@ class SaleOrder(models.Model):
                             "[WA] Failed notify order_done for %s: %s",
                             order.name, e,
                         )
+
+        if 'website_order_stage' in vals and before_stage:
+            new_stage = vals['website_order_stage']
+            for order in self:
+                old_stage = before_stage.get(order.id)
+                if old_stage != 'out_for_delivery' and new_stage == 'out_for_delivery':
+                    try:
+                        order._whatsapp_notify_order_delivered()
+                    except Exception as e:
+                        _logger.exception(
+                            "[WA] Failed notify order_delivered for %s: %s",
+                            order.name, e,
+                        )
         return res
 
     # ============================================================
-    # PRIVATE: kirim WA per trigger
+    # PRIVATE: helpers
     # ============================================================
 
     def _whatsapp_is_trigger_enabled(self, config_key):
@@ -110,7 +137,6 @@ class SaleOrder(models.Model):
         ICP = self.env['ir.config_parameter'].sudo()
         base = (ICP.get_param('whatsapp_evolution.portal_base_url')
                 or 'https://odoo.warunglakku.com').rstrip('/')
-        # Generate access_token kalau belum ada
         if not self.access_token:
             self._generate_access_token_safe()
         return '%s/shop/order/%d/%s' % (base, self.id, self.access_token or 'NO_TOKEN')
@@ -140,9 +166,15 @@ class SaleOrder(models.Model):
         except Exception:
             return str(amount)
 
+    # ============================================================
+    # BUILD TEXT
+    # ============================================================
+
     def _whatsapp_build_order_received_text(self):
         """Pesan DETAIL untuk order diterima (initial message).
+
         Format to-the-point, no greeting, langsung ke isi.
+        Emoji header 🛒 untuk menandai ini notifikasi order baru.
         """
         self.ensure_one()
         store = self._whatsapp_get_store_name()
@@ -150,7 +182,7 @@ class SaleOrder(models.Model):
 
         lines_text = []
         for line in self.order_line:
-            if line.display_type:  # skip section/note lines
+            if line.display_type:
                 continue
             name = line.product_id.name or line.name or ''
             qty = int(line.product_uom_qty) if line.product_uom_qty == int(line.product_uom_qty) else line.product_uom_qty
@@ -160,7 +192,7 @@ class SaleOrder(models.Model):
         items = '\n'.join(lines_text) if lines_text else '(tidak ada item)'
 
         text = (
-            "Pesanan {order} di {store} telah diterima.\n\n"
+            "\U0001F6D2 Pesanan {order} di {store} telah diterima.\n\n"
             "No. Order: {order}\n"
             "Tanggal: {date}\n"
             "Metode: {payment}\n\n"
@@ -194,12 +226,18 @@ class SaleOrder(models.Model):
             pass
         return 'Online'
 
-    def _whatsapp_build_status_update_text(self, status_label, extra_info=''):
+    def _whatsapp_build_status_update_text(self, emoji, status_label, extra_info=''):
         """Pesan UPDATE STATUS — singkat, no greeting, no URL.
-        Format: 'Pesanan {order} - {status}' (+ extra_info kalau ada)
+
+        Format: '{emoji} Pesanan {order} - {status}' (+ extra_info kalau ada)
+
+        :param emoji: emoji prefix (string), mis. '🚚', '✅', '❌'
+        :param status_label: label status, mis. 'Pesanan Dikirim'
+        :param extra_info: info tambahan opsional (alasan, catatan, dll)
         """
         self.ensure_one()
-        text = "Pesanan {order} - {status}".format(
+        text = "{emoji} Pesanan {order} - {status}".format(
+            emoji=emoji,
             order=self.name,
             status=status_label,
         )
@@ -267,12 +305,29 @@ class SaleOrder(models.Model):
             },
         }
 
-    def _whatsapp_notify_order_done(self):
+    def _whatsapp_notify_order_delivered(self):
+        """Trigger: website_order_stage -> out_for_delivery (Pesanan Dikirim)."""
         for order in self:
-            text = order._whatsapp_build_status_update_text('Pesanan Selesai')
+            text = order._whatsapp_build_status_update_text(
+                emoji='\U0001F69A',  # 🚚 delivery truck
+                status_label='Pesanan Dikirim',
+            )
+            order._whatsapp_send_safe('order_delivered', text)
+
+    def _whatsapp_notify_order_done(self):
+        """Trigger: state -> done (Pesanan Selesai)."""
+        for order in self:
+            text = order._whatsapp_build_status_update_text(
+                emoji='\u2705',  # ✅ check mark button
+                status_label='Pesanan Selesai',
+            )
             order._whatsapp_send_safe('order_done', text)
 
     def _whatsapp_notify_order_cancelled(self):
+        """Trigger: state -> cancel (Pesanan Dibatalkan)."""
         for order in self:
-            text = order._whatsapp_build_status_update_text('Pesanan Dibatalkan')
+            text = order._whatsapp_build_status_update_text(
+                emoji='\u274C',  # ❌ cross mark
+                status_label='Pesanan Dibatalkan',
+            )
             order._whatsapp_send_safe('order_cancelled', text)

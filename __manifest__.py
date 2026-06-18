@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'WhatsApp Evolution API Notification',
-    'version': '17.0.1.1.0',
+    'version': '17.0.1.2.0',
     'category': 'Website/Website',
     'summary': 'Notifikasi WhatsApp otomatis ke customer via Evolution API untuk setiap perubahan status pesanan',
     'description': """
@@ -11,26 +11,33 @@ WhatsApp Evolution API Notification
 Modul Odoo 17 untuk kirim notifikasi WhatsApp ke customer otomatis setiap
 perubahan status pesanan, menggunakan Evolution API (https://evolution.warunglakku.com).
 
-Trigger yang didukung:
-- Order diterima (sale order confirmed) -> kirim DETAIL ORDER + URL portal
-- Pembayaran QRIS diterima (admin verify) -> status update biasa
-- Pembayaran QRIS ditolak (admin reject) -> status update biasa
-- QRIS menunggu verifikasi -> status update biasa (opsional)
-- COD siap dikirim -> status update biasa
-- Pesanan dikirim (delivered) -> status update biasa
-- Pesanan selesai (done) -> status update biasa
-- Pesanan dibatalkan (cancelled) -> status update biasa
+Trigger yang didukung (dengan emoji prefix):
+- 🛒 Order diterima (sale order confirmed) -> kirim DETAIL ORDER + URL portal
+- ⏳ QRIS menunggu verifikasi -> status update (opsional, default OFF)
+- ✅ Pembayaran QRIS diterima (admin verify) -> status update biasa
+- ❌ Pembayaran QRIS ditolak (admin reject) -> status update + alasan
+- 📦 COD siap dikirim -> status update biasa
+- 🚚 Pesanan dikirim (website_order_stage -> out_for_delivery) -> status update
+- ✅ Pesanan selesai (done) -> status update biasa
+- ❌ Pesanan dibatalkan (cancelled) -> status update biasa
+
+Format pesan: TO-THE-POINT, no greeting (langsung ke isi).
+Emoji prefix memudahkan customer mengenali jenis update.
 
 Pesan "Order diterima" menyertakan:
 - Nomor order
 - Detail item (nama produk, qty, harga, subtotal)
 - Total
-- URL portal customer (/my/orders/<id>)
+- URL halaman public read-only untuk detail pesanan
 
-Pesan update status berikutnya hanya:
-- Nomor order
-- Status baru
-- URL portal customer (singkat)
+Pesan update status berikutnya sangat singkat:
+- Emoji + status + nomor order
+- (Tidak ada URL di pesan update — customer sudah punya link dari notif pertama)
+
+Halaman public read-only: /shop/order/<order_id>/<access_token>
+- Akses tanpa login
+- Hanya view (tidak ada action/edit)
+- Token di-generate otomatis per order (field access_token bawaan website_sale)
 
 Konfigurasi:
 - Settings > Website > WhatsApp Evolution API Settings
