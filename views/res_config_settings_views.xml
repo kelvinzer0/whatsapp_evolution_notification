@@ -51,6 +51,9 @@
                     <setting id="whatsapp_trigger_order_delivered" string="Pesanan Dalam Pengiriman">
                         <field name="whatsapp_trigger_order_delivered"/>
                     </setting>
+                    <setting id="whatsapp_trigger_order_ready_for_pickup" string="Pesanan Siap Diambil (Pickup)">
+                        <field name="whatsapp_trigger_order_ready_for_pickup"/>
+                    </setting>
                     <setting id="whatsapp_trigger_order_done" string="Pesanan Selesai">
                         <field name="whatsapp_trigger_order_done"/>
                     </setting>

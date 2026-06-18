@@ -73,6 +73,13 @@ class ResConfigSettings(models.TransientModel):
         config_parameter='whatsapp_evolution.trigger_order_delivered',
         default=True,
     )
+    whatsapp_trigger_order_ready_for_pickup = fields.Boolean(
+        string='Pesanan Siap Diambil (Pickup)',
+        config_parameter='whatsapp_evolution.trigger_order_ready_for_pickup',
+        default=True,
+        help="Kirim WA 'Pesanan Siap Diambil' saat admin klik Mark Ready for Pickup. "
+             "Hanya relevan untuk pickup orders (website_sale_pickup_at_store).",
+    )
     whatsapp_trigger_order_cooking = fields.Boolean(
         string='Pesanan Sedang Dimasak',
         config_parameter='whatsapp_evolution.trigger_order_cooking',

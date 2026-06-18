@@ -37,6 +37,7 @@ class WhatsappMessageLog(models.Model):
         ('order_received', 'Order Diterima'),
         ('order_cooking', 'Pesanan Sedang Dimasak'),
         ('order_delivered', 'Pesanan Dalam Pengiriman'),
+        ('order_ready_for_pickup', 'Pesanan Siap Diambil'),
         ('order_done', 'Pesanan Selesai'),
         ('order_cancelled', 'Pesanan Dibatalkan'),
         ('qris_pending_verification', 'QRIS Menunggu Verifikasi'),

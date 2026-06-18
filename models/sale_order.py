@@ -126,14 +126,20 @@ class SaleOrder(models.Model):
     #   stage != 'out_for_delivery' (admin belum klik Send to Courier,
     #   jadi customer belum dapat notifikasi pengiriman).
     # - order_done (Pesanan Selesai) SELALU saat Mark Delivered.
+    #
+    # PICKUP ORDERS (is_pickup_order=True, if website_sale_pickup_at_store
+    # terinstall): skip order_delivered sama sekali (tidak relevan untuk
+    # pickup). order_done tetap dikirim via action_wsd_mark_picked_up.
     # ============================================================
     def action_wsd_mark_delivered(self):
         before_stage = {order.id: order.website_order_stage for order in self}
+        is_pickup_field_exists = 'is_pickup_order' in self._fields
         res = super().action_wsd_mark_delivered()
         for order in self:
             prev = before_stage.get(order.id)
-            # Jika admin tidak lewat Send to Courier, kirim pengiriman dulu
-            if prev != 'out_for_delivery':
+            # Skip delivered notification entirely untuk pickup orders
+            is_pickup = bool(is_pickup_field_exists and order.is_pickup_order)
+            if not is_pickup and prev != 'out_for_delivery':
                 try:
                     order._whatsapp_notify_order_delivered()
                 except Exception as e:
@@ -147,6 +153,44 @@ class SaleOrder(models.Model):
             except Exception as e:
                 _logger.exception(
                     "[WA] Failed notify order_done (from mark_delivered) for %s: %s",
+                    order.name, e,
+                )
+        return res
+
+    # ============================================================
+    # OVERRIDE: action_wsd_mark_ready_for_pickup (dashboard v1.1.0+)
+    # Trigger: order_ready_for_pickup (Pesanan Siap Diambil)
+    # Hanya kirim kalau memang pickup order.
+    # ============================================================
+    def action_wsd_mark_ready_for_pickup(self):
+        res = super().action_wsd_mark_ready_for_pickup()
+        for order in self:
+            is_pickup_field_exists = 'is_pickup_order' in self._fields
+            is_pickup = bool(is_pickup_field_exists and order.is_pickup_order)
+            # Jika bukan pickup order, tetap kirim siap diambil (best effort)
+            # tapi admin biasanya pakai tombol ini hanya untuk pickup.
+            try:
+                order._whatsapp_notify_order_ready_for_pickup()
+            except Exception as e:
+                _logger.exception(
+                    "[WA] Failed notify order_ready_for_pickup for %s: %s",
+                    order.name, e,
+                )
+        return res
+
+    # ============================================================
+    # OVERRIDE: action_wsd_mark_picked_up (dashboard v1.1.0+)
+    # Trigger: order_done (Pesanan Selesai + feedback URL).
+    # Pickup orders skip order_delivered (tidak relevan).
+    # ============================================================
+    def action_wsd_mark_picked_up(self):
+        res = super().action_wsd_mark_picked_up()
+        for order in self:
+            try:
+                order._whatsapp_notify_order_done()
+            except Exception as e:
+                _logger.exception(
+                    "[WA] Failed notify order_done (from mark_picked_up) for %s: %s",
                     order.name, e,
                 )
         return res
@@ -345,6 +389,32 @@ class SaleOrder(models.Model):
         self.ensure_one()
         return "*Pesanan Dibatalkan*\nOrder %s" % self.name
 
+    def _whatsapp_build_ready_for_pickup_text(self):
+        """Format premium, no emoji, dengan info alamat + jam buka:
+        *Pesanan Siap Diambil*
+        Order S00026
+
+        Silakan ambil pesanan Anda di Warung Lakku:
+        Dusun Ngrekesan, Desa Ngadri, Blitar
+
+        Jam buka: Sen-Sab 12:00-20:00 | Tutup: Kam
+        """
+        self.ensure_one()
+        ICP = self.env['ir.config_parameter'].sudo()
+        store_name = ICP.get_param('whatsapp_evolution.store_name') or 'Warung Lakku'
+        store_addr = ICP.get_param('website_sale_pickup_at_store.store_address', '') or ''
+        hours_display = self.env['sale.order']._pickup_hours_display() \
+            if 'is_pickup_order' in self._fields else ''
+
+        text = "*Pesanan Siap Diambil*\nOrder %s\n\nSilakan ambil pesanan Anda di %s." % (
+            self.name, store_name,
+        )
+        if store_addr:
+            text += "\n" + store_addr
+        if hours_display:
+            text += "\n\nJam buka: " + hours_display
+        return text
+
     def _whatsapp_send_safe(self, trigger, text, payment_tx_id=False):
         """Wrapper: cek trigger enabled + kirim + log."""
         self.ensure_one()
@@ -352,6 +422,7 @@ class SaleOrder(models.Model):
             'order_received': 'trigger_order_received',
             'order_cooking': 'trigger_order_cooking',
             'order_delivered': 'trigger_order_delivered',
+            'order_ready_for_pickup': 'trigger_order_ready_for_pickup',
             'order_done': 'trigger_order_done',
             'order_cancelled': 'trigger_order_cancelled',
         }
@@ -442,6 +513,15 @@ class SaleOrder(models.Model):
         for order in self:
             text = order._whatsapp_build_done_text()
             order._whatsapp_send_safe('order_done', text)
+
+    def _whatsapp_notify_order_ready_for_pickup(self):
+        """Trigger: admin klik 'Mark Ready for Pickup' (Pesanan Siap Diambil).
+        Hanya relevan untuk pickup orders. Tapi method ini tetap dipanggil
+        untuk non-pickup juga (best effort); admin biasanya pakai tombol
+        ini hanya untuk pickup."""
+        for order in self:
+            text = order._whatsapp_build_ready_for_pickup_text()
+            order._whatsapp_send_safe('order_ready_for_pickup', text)
 
     def _whatsapp_notify_order_cancelled(self):
         """Trigger: state -> cancel (Pesanan Dibatalkan)."""
